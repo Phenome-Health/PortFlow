@@ -4,7 +4,7 @@ A small toolkit for model portability. Includes Conditional Normalizing Flows fo
 <img width = "400" src = https://github.com/user-attachments/assets/193ff33e-f9e7-4cba-adec-2c2ed2044d4d />
 
 # Modules
-Each module can be used as standalone classes, or combined into the PortFlow class.
+Each module can be used as standalone classes, or combined into the PortFlow class. Displayed named arguements are the default arguments.
 
 ## PortFlow
 The ```PortFlow``` class is an all-in-one imputer and transfer class for imputing blocks of missing features and transfering models from a large source data set to a small target data set. After the source data has been trained, the output folder should be downloaded and reuploaded to the target data set. 
