@@ -101,14 +101,7 @@ model.fit_target(data,
 
 The ```CondNormFlow``` class is a pytorch implementation of the Conditional Normalzing Flows architecture. The code is largerly borrowed from [Winlkler et al. (2019)](https://arxiv.org/abs/1912.00042) but has been adapted for simpler tabular data as opposed to 2D image data. The main idea is to learn a cooridante transformation which maps the complicated data distribution of a subset of features to a Gaussian distribution where sampling is easy to perform. The details of the mapping and the final Gaussian distribution depends on a set of features on which your model will be conditioned. This gives a unique distribution for each set of conditioned features, and the resulting imputed data the preserves the covariance (and higher order moment) structure of the initial, full data distribution. 
 
-Using ```CondNormFlow``` for imputation can be thought of as a higher-order regression. That is, while standard regression analysis aims to learn a conditional mean of the predictor $\mathbb{E}[Y|X]$, ```CondNormFlow``` learns and samples from the entire conditional distribution, where the conditional mean as well as the higher-order conditional moments are learned. 
-
-<img width="299" height="126" alt="Screenshot 2026-03-26 at 2 44 56 PM" src="https://github.com/user-attachments/assets/eb6bf4d5-154b-465a-9667-8ea7e0ceab8d" /> 
-
-
-Image adapted from [the original publication](https://arxiv.org/abs/1912.00042). 
-
-Operationally ```CondNormFlows``` is comprised of a number of neural networks, all of which have at most 2 hidden layers, with ReLu activation function and 25% dropout layers. These networks are for learning the specific coordinate transformation, as well as the means and variances of a number of internal Gaussian distributions. The loss function is the negative log-likelihood of the distribution including the Jacobian determinant of the transformation. 
+Using ```CondNormFlow``` for imputation can be thought of as a higher-order regression. That is, while standard regression analysis aims to learn a conditional mean of the predictor $\mathbb{E}[Y|X]$, ```CondNormFlow``` learns and samples from the entire conditional distribution, where the conditional mean as well as the higher-order conditional moments are learned. Operationally ```CondNormFlows``` is comprised of a number of neural networks, all of which have at most 2 hidden layers, with ReLu activation function and 25% dropout layers. These networks are for learning the specific coordinate transformation, as well as the means and variances of a number of internal Gaussian distributions. The loss function is the negative log-likelihood of the distribution including the Jacobian determinant of the transformation. 
 
 <<< ADD FIGURE HERE SHOWING THE DETAILS OF EACH LAYER >>>>>
 
