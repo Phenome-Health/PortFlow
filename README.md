@@ -1,11 +1,101 @@
 # PortFlow
-A small toolkit for model portability. Includes Conditional Normalizing Flows for fast imputation for blocks of correlated missing features, Transfer Lasso for transfer learning of linear models, and PortFlow which combines both into a single, simple workflow. 
+A small toolkit for model portability. Includes Conditional Normalizing Flows for fast imputation for blocks of correlated missing features, Transfer Lasso for transfer learning of linear models, and PortFlow which combines both into a single, simple workflow. On the source data, the user initializes the model with the sets of features of both the target and source dataset. PortFlow then simultaneously learns a Conditional Normalizig Flow for imputing source-only features based on overlapping features, and trains a linear regression model on a user-defined outcome. The architecutre is summarzied in the following figure:
 
+<img width = "400" src = https://github.com/user-attachments/assets/193ff33e-f9e7-4cba-adec-2c2ed2044d4d />
 
 # Modules
 Each module can be used as standalone classes, or combined into the PortFlow class.
 
 ## PortFlow
+The ```PortFlow``` class is an all-in-one imputer and transfer class for imputing blocks of missing features and transfering models from a large source data set to a small target data set. After the source data has been trained, the output folder should be downloaded and reuploaded to the target data set. 
+
+```
+import numpy as np
+import pandas as pd
+from src.port_flow import PortFlow
+import pickle
+
+target_feats = [LIST OF FEATURES OF TARGET DATA]
+source_feats = [LIST OF FEATURES ON SOURCE DATA]
+#### PORTFLOW WILL IMPUTE SOURCE ONLY FEATURES BASED ON OVERLAPPING FEATURES.
+#### FOR BEST RESULTS, ENSURE THIS NUMBER OF SOURCE ONLY FEATS IS NOT MORE THAN 40% OF THE ENTIRE DATASET
+#### ALSO MAKE SURE THE STRING TYPES ARE CONSITINET, I.E. ALL UPPER OR ALL LOWERCASE. DEALERS CHOICE
+
+model = PortFlow(
+        target_feats,
+        source_feats,
+        linear_model = 'lasso',
+        n_folds_linear = None,
+        lambda_lm = 1e-3,
+        enet_l1_ratio = .5,
+        n_flow_steps = 4,
+        n_layers_flow = 3,
+        share_layer = 'simple',
+        optimizer = 'adam',
+        out_dir = './port_flow_output/',
+        lr_initial = 1e-3,
+        scheduler_steps = 200,
+        scheduler_gamma = .5,
+        lambda_trans = 1,
+        alpha_trans = 0,
+        fit_intercept = True,
+        eps_cv = 1e-3
+                )
+
+################ ON SOURCE DATA ONLY ###################
+source_data = pd.read_csv('/PATH/TO/SOURCE/DATA')
+
+model.fit_source(data, 
+           predict_col, ## column with outcome for the linear model 
+           lm_outfile = 'source_lm_params.csv', ## save the parameters of the linear model
+           cnf_outfile = 'trained_model.pth', ## save the CondNormFlow model
+           split_col = None, ## if train_test_split has already been done, split_col is the columns which labels each set
+           test_size = .2, ## size of test set of linear model
+           seed = None, ## random seed for train_test_split
+           **kwargs ## keywork arguments fed into conditional normalizing flow (see below)
+                )
+
+################ ON TARGET DATA ONLY ###################
+target_data = pd.read_csv('/PATH/TO/TARGET/DATA')
+#### REINITIALIZE MODEL ####
+model = PortFlow(
+        target_feats,
+        source_feats,
+        linear_model = 'lasso',
+        n_folds_linear = None,
+        lambda_lm = 1e-3,
+        enet_l1_ratio = .5,
+        n_flow_steps = 4,
+        n_layers_flow = 3,
+        share_layer = 'simple',
+        optimizer = 'adam',
+        out_dir = './port_flow_output/',
+        lr_initial = 1e-3,
+        scheduler_steps = 200,
+        scheduler_gamma = .5,
+        lambda_trans = 1,
+        alpha_trans = 0,
+        fit_intercept = True,
+        eps_cv = 1e-3
+                )
+
+model.fit_target(data, 
+            predict_col, ## same as source data
+            n_samples = 1, ## denote the number of imputed samples to keep (for multiple imputation)
+            seed = None, ## random seed for train_test_split
+            shift = True, ## shift target data mean to match that of the source
+            scale = False, ## scale target data to have same variance as source
+            outfile = 'target_lm_params.csv', ## to save the parameters of the target model
+            initialize = 'zeros', ## how to initialize the TransferLasso parameters
+            l = 1, ## regularization parameters for TransferLasso
+            a = 0, ## strenght of regular Lasso term in the TransferLasso loss function
+            tol = 1e-4, ## tolerance for stopper criteria (NOT FINISHED YET)
+            max_iter = 1000, ## number of iterations for coordinate descent
+            include_target_only = False, ## whether or not to include target_only features in the transfer lasso 
+            test_size = .2 ## test size for train_test_split
+                )
+```
+
 
 ## CondNormFlow
 
