@@ -39,8 +39,7 @@ model = PortFlow(
         lambda_trans = 1,
         alpha_trans = 0,
         fit_intercept = True,
-        eps_cv = 1e-3
-                )
+        eps_cv = 1e-3)
 
 ################ ON SOURCE DATA ONLY ###################
 source_data = pd.read_csv('/PATH/TO/SOURCE/DATA')
@@ -52,8 +51,7 @@ model.fit_source(data,
            split_col = None, ## if train_test_split has already been done, split_col is the columns which labels each set
            test_size = .2, ## size of test set of linear model
            seed = None, ## random seed for train_test_split
-           **kwargs ## keywork arguments fed into conditional normalizing flow (see below)
-                )
+           **kwargs) ## keywork arguments fed into conditional normalizing flow (see below)
 
 ################ ON TARGET DATA ONLY ###################
 target_data = pd.read_csv('/PATH/TO/TARGET/DATA')
@@ -76,8 +74,7 @@ model = PortFlow(
         lambda_trans = 1,
         alpha_trans = 0,
         fit_intercept = True,
-        eps_cv = 1e-3
-                )
+        eps_cv = 1e-3)
 
 model.fit_target(data, 
             predict_col, ## same as source data
@@ -92,8 +89,8 @@ model.fit_target(data,
             tol = 1e-4, ## tolerance for stopper criteria (NOT FINISHED YET)
             max_iter = 1000, ## number of iterations for coordinate descent
             include_target_only = False, ## whether or not to include target_only features in the transfer lasso 
-            test_size = .2 ## test size for train_test_split
-                )
+            test_size = .2) ## test size for train_test_split
+                
 ```
 
 
