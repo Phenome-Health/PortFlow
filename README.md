@@ -118,7 +118,8 @@ data = pd.read_csv('/PATH/TO/DATA')
 idx_split = [THE INDICIES OF THE FEATURES YOU WANT TO MODEL]
 input_shape = len(idx_split)
 n_cond = num_features - input_shape
-
+L = 4
+K= 3
 data = load_data(data) # performs train-test-validation split and loads data into a pytorch DataLoader object/
 
 model = FlowModel(
@@ -131,7 +132,16 @@ model = FlowModel(
 
 optimizer = optim.Adam(model.parameters(), lr = .001, amsgrad = True)
 scheduler = optim.lr_scheduler.StepLR(optimizer, step_size = 200, gamma = .5)
-model = train(model, optimizer, scheduler, data, n_epochs = 10, eturn_model = True, out_dir = './', outfile = 'trained_model.pth', plot_training = True, clip_value = 25)
+model = train(model,
+                optimizer,
+                scheduler,
+                data,
+                n_epochs = 10,
+                return_model = True,
+                out_dir = './',
+                outfile = 'trained_model.pth',
+                plot_training = True,
+                clip_value = 25)
 ```
 
 For sampling from the model, again we utilize pytorch's DataLoader object and tqdm. 
