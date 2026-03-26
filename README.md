@@ -9,6 +9,7 @@ Each module can be used as standalone classes, or combined into the PortFlow cla
 ## PortFlow
 The ```PortFlow``` class is an all-in-one imputer and transfer class for imputing blocks of missing features and transfering models from a large source data set to a small target data set. After the source data has been trained, the output folder should be downloaded and reuploaded to the target data set. 
 
+### Usage
 ```
 import numpy as np
 import pandas as pd
@@ -96,7 +97,7 @@ model.fit_target(data,
 
 ## CondNormFlow
 
-The ```CondNormFlow``` class is a pytorch implementation of the Conditional Normalzing Flows architecture. The code is largerly borrowed from [Winlkler et al. (2019)](https://arxiv.org/abs/1912.00042) but has been adapted for simpler tabular data as opposed to 2D image data. The main idea is to learn a cooridante transformation which maps the complicated data distribution of a subset of features to a Gaussian distribution where sampling is easy to perform. The details of the mapping and the final Gaussian distribution depends on a set of features on which your model will be conditioned. This gives a unique distribution for each set of conditioned features, and the resulting imputed data the preserves the covariance (and higher order moment) structure of the initial, full data distribution. 
+The ```CondNormFlow``` class is a pytorch implementation of the Conditional Normalzing Flows architecture. The code is largerly borrowed from [Winlkler et al. (2019)](https://arxiv.org/abs/1912.00042) but has been adapted for the simpler setting of tabular data, as opposed to 2D image data. The main idea is to learn a cooridante transformation which maps the complicated data distribution of a subset of features to a Gaussian distribution where sampling is easy to perform. The details of the mapping and the final Gaussian distribution depends on a set of features on which your model will be conditioned. This gives a unique distribution for each set of conditioned features, and the resulting imputed data the preserves the covariance (and higher order moment) structure of the initial, full data distribution. 
 
 Using ```CondNormFlow``` for imputation can be thought of as a higher-order regression. That is, while standard regression analysis aims to learn a conditional mean of the predictor $\mathbb{E}[Y|X]$, ```CondNormFlow``` learns and samples from the entire conditional distribution, where the conditional mean as well as the higher-order conditional moments are learned. Operationally ```CondNormFlows``` is comprised of a number of neural networks, all of which have at most 2 hidden layers, with ReLu activation function and 25% dropout layers. These networks are for learning the specific coordinate transformation, as well as the means and variances of a number of internal Gaussian distributions. The loss function is the negative log-likelihood of the distribution including the Jacobian determinant of the transformation. 
 
@@ -151,4 +152,37 @@ for batch_idx, item in enumerate(tqdm(loader)):
     dat = np.hstack([Z_samp, x])
     data_samps.append(dat)
 X_imp = np.concatenate(data_samps, axis = 0)
+```
+
+## Transfer Lasso
+
+Here we present a simple python implementation of the Transfer Lasso proposed in [Takada and Fujisawa (2020)](https://arxiv.org/pdf/2006.14845). The main idea is that in addition to the usual $L^1$ regualization term, there is an additional term $|\beta - \tilde{\beta}|_1$ that centers the Lasso estimate on a previously computed estimate of the same parameter. The relative contributions of both the Lasso and Transfer terms are weighted some $0 \le a \le 1$, where $a=1$ yields a normal Lasso estimae and $a=0$ yield a Transfer Lasso estimate. 
+
+### Usage
+
+```
+import pandas as pd
+import numpy as np
+from src.transfer_lasso import TransferLasso
+from sklearn.model_selection import train_test_split
+
+data = pd.read_csv('/PATH/TO/DATA')
+beta_t = pd.read_csv('/PATH/TO/PRIOR/ESTIMATES)
+X, Y = data.drop(predict_col, axis - 1), data[predict_col]
+X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = .2, shuffle = True)
+
+model = TransferLasso(X,Y,beta_t,
+                        fit_intercept = True,
+                        initialize = 'zeros',
+                        l = 1,
+                        a = 0,
+                        tol = 1e-4,
+                        max_iter = 1000)
+model.fit()
+
+R2 = model.score(X_test, Y_test)
+
+coefs = model.betas
+intercept = model.alpha 
+
 ```
