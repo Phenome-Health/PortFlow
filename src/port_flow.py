@@ -18,6 +18,7 @@ from scipy import stats
 
 def get_overlapping_features(target_features, source_features):
     overlap = list(set(source_features).intersection(target_features))
+    overlap.sort()
     target_only = [x for x in target_features if x not in overlap]
     source_only = [x for x in source_features if x not in overlap]
     
