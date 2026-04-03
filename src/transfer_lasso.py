@@ -2,7 +2,7 @@ import numpy as np
 from scipy import stats
 
 try:
-    from numba import jit
+    from numba import jit, njit
     from numba.experimental import jitclass
     from numba import float32, int32, boolean, char, float64
     HAS_NUMBA = True
@@ -49,20 +49,39 @@ def np_apply_along_axis(func1d, axis, arr):
       result[i] = func1d(arr[i, :])
   return result
 
-@jit(nopython=True)
-def np_mean(array, axis):
-  return np_apply_along_axis(np.mean, axis, array)
+@jit(nopython = True)
+def _mean_and_std_jit(X):
+    """Compute mean and std in a single pass per column"""
+    N = X.shape[0]
+    P = X.shape[1]
+    mean = np.empty(P, dtype=X.dtype)
+    std = np.empty(P, dtype=X.dtype)
+    for j in range(P):
+        col = X[:, j]
+        m = col.mean()
+        mean[j] = m
+        std[j] = col.std()
+    return mean, std
 
 @jit(nopython=True)
-def np_std(array, axis):
-  return np_apply_along_axis(np.std, axis, array)
+def _zscore_jit(X, axis=0):
+    mean, std = _mean_and_std_jit(X)
+    return np.asfortranarray((X - mean) / std)
+    
+# @jit(nopython=True)
+# def np_mean(array, axis):
+#   return np_apply_along_axis(np.mean, axis, array)
+
+# @jit(nopython=True)
+# def np_std(array, axis):
+#   return np_apply_along_axis(np.std, axis, array)
 
 
-@jit(nopython=True)
-def _zscore_jit(X, axis = 0):
-    mean = np_mean(X, axis)
-    std = np_std(X, axis)
-    return np.asfortranarray((X - mean)/std)
+# @jit(nopython=True)
+# def _zscore_jit(X, axis = 0):
+#     mean = np_mean(X, axis)
+#     std = np_std(X, axis)
+#     return np.asfortranarray((X - mean)/std)
 
 
 spec = [
@@ -82,7 +101,7 @@ spec = [
 ]
 
 @jitclass(spec)
-class TransferLasso():
+class _TransferLasso():
     def __init__(self,
                 X,
                 Y,
@@ -227,3 +246,37 @@ class TransferLasso():
         Y_pred = self.predict(X)
         mse = self.mse(Y, Y_pred)
         return 1- mse/Y.var()
+
+
+def TransferLasso(X, Y, beta_t, fit_intercept=True, alpha=0.0, copy_X=False,
+                  l=1.0, a=0.0, tol=1e-4, max_iter=1000, n_cpus=1):
+    # Do type conversion in plain Python before entering njit
+    if X.dtype != np.float32:
+        X = X.astype(np.float32)
+    if Y.dtype != np.float32:
+        Y = Y.astype(np.float32)
+    if beta_t.dtype != np.float32:
+        beta_t = beta_t.astype(np.float32)
+    return _TransferLasso_njit(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus)
+
+@njit
+def _TransferLasso_njit(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus):
+    return _TransferLasso(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus)
+
+# @njit
+# def TransferLasso(
+#                 X,
+#                 Y,
+#                 beta_t,
+#                 fit_intercept = True, 
+#                 alpha = 0.0,
+#                 copy_X = False, 
+#                 l = 1.0, 
+#                 a = 0.0, 
+#                 tol = 1e-4, 
+#                 max_iter = 1000,
+#                 n_cpus = 1 ):
+#     X = np.ascontiguousarray(X, dtype=np.float32) 
+#     Y = np.ascontiguousarray(Y, dtype=np.float32)
+#     beta_t = np.ascontiguousarray(beta_t, dtype=np.float32)
+#     return _TransferLasso(X,Y,beta_t, fit_intercept , alpha, copy_X , l , a , tol , max_iter , n_cpus )
