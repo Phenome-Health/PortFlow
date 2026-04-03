@@ -304,10 +304,11 @@ class PortFlow():
         Y = X[predict_col].values
         X = X[feats_use].values
         
+        X, Y, beta_t = X.astype(np.float32), Y.astype(np.float32), beta_t.astype(np.float32)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = .2,random_state = seed, shuffle = True)
         
-        X_train = stats.zscore(X_train, axis = 0)
-        X_test = stats.zscore(X_test, axis = 0)
+        X_test = _zscore_jit(X_test, 0)
+        
         
         model_trans = TransferLasso(X_train, 
                                     Y_train, 
