@@ -68,9 +68,9 @@ def _zscore_jit(X, axis=0):
     mean, std = _mean_and_std_jit(X)
     return np.asfortranarray((X - mean) / std)
     
-# @jit(nopython=True)
-# def np_mean(array, axis):
-#   return np_apply_along_axis(np.mean, axis, array)
+@jit(nopython=True)
+def np_mean(array, axis):
+  return np_apply_along_axis(np.mean, axis, array)
 
 # @jit(nopython=True)
 # def np_std(array, axis):
