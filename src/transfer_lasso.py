@@ -1,6 +1,3 @@
-#Optional numba JIT compilation for additional speedup
-import numpy as np
-from scipy import stats
 try:
     from numba import jit
     from numba.experimental import jitclass
@@ -21,7 +18,7 @@ def _solutions(gamma,b,l,a):
 @jit(nopython=True)
 def _compute_gamma_jit(X_col, residual_i, N):
     """JIT-compiled gamma computation"""
-    return X_col.T @ residual_i / N
+    return np.dot(X_col, residual_i) / N
 
 @jit(nopython=True)
 def _compute_residual_i_jit(cached_residual, X_col, beta_i):
@@ -67,10 +64,10 @@ def _zscore_jit(X, axis = 0):
 
 spec = [
     ('X', float32[::1,:]),
-    ('Y', float32[:]),
-    ('beta_t', float32[:]),
+    ('Y', float32[::1]),
+    ('beta_t', float32[::1]),
     ('fit_intercept', boolean),
-    ('beta', float32[:]),
+    ('beta', float32[::1]),
     ('alpha', float32),
     ('copy_X', boolean),
     ('l', float32),
@@ -78,7 +75,7 @@ spec = [
     ('tol', float32),
     ('max_iter', int32),
     ('n_cpus', int32), 
-    ('_cached_residual', float32[:])
+    ('_cached_residual', float32[::1])
 ]
 
 @jitclass(spec)
