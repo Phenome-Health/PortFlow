@@ -161,7 +161,6 @@ X_imp = np.concatenate(data_samps, axis = 0)
 
 Here we present a simple python implementation of the Transfer Lasso proposed in [Takada and Fujisawa (2020)](https://arxiv.org/pdf/2006.14845). The main idea is that in addition to the usual $L^1$ regualization term, there is an additional term $|\beta - \tilde{\beta}|_1$ that centers the Lasso estimate on a previously computed estimate of the same parameter, $\tilde{\beta}$. The relative contributions of both the Lasso and Transfer terms are weighted some $0 \le a \le 1$, where $a=1$ yields a normal Lasso estimae and $a=0$ yields a pure Transfer Lasso estimate. 
 
-One rather pedantic (but necessary) step is to ensure that all input arrays are ```np.float32``` arrays. Transfer Lasso uses numba under the hood which requires strict typing, and arrays of type ```np.float32``` are more memory efficient on large arrays. This typing is taken care of automatically within the PortFlow class. 
 
 ### Usage
 
@@ -174,7 +173,6 @@ from sklearn.model_selection import train_test_split
 data = pd.read_csv('/PATH/TO/DATA')
 beta_t = pd.read_csv('/PATH/TO/PRIOR/ESTIMATES)
 X, Y = data.drop(predict_col, axis - 1), data[predict_col]
-X, Y, beta_t = X.astype(np.float32), Y.astype(np.float32), beta_t.astype(np.float32) ## NECESSARY FOR NUMBA SPEED UP
 X_train, X_test, Y_train, Y_test = train_test_split(X,Y, test_size = .2, shuffle = True)
 
 model = TransferLasso(X,Y,beta_t,
