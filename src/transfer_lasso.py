@@ -1,3 +1,6 @@
+import numpy as np
+from scipy import stats
+
 try:
     from numba import jit
     from numba.experimental import jitclass
