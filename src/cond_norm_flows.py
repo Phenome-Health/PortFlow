@@ -899,7 +899,8 @@ def train(model, optimizer, scheduler, data, n_epochs = 10, return_model = True,
     dfp['epoch'] = yy
     dfp.to_csv(f'{out_dir}/loss_p_epoch.csv')
     
-    torch.save(model, f'{out_dir}{outfile}')
+    #torch.save(model, f'{out_dir}{outfile}')
+    torch.save(model.state_dict(), out_dir + outfile)
     
     if plot_training: 
         plt.plot(yy, xx, label = 'training')

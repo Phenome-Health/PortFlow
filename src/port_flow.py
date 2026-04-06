@@ -205,7 +205,7 @@ class PortFlow():
         if out_dir is None:
             out_dir = self.out_dir
         self.source_lm_params = pd.read_csv(out_dir + lm_params_path, index_col = 0)
-        self.cnf_model = torch.load(out_dir + cnf_model_path, weights_only = False)
+        self.cnf_model = self.cnf_model.load_state_dict(torch.load(out_dir + cnf_model_path, weights_only = True))
         
         self.predict_col = self.source_lm_params.index.tolist()[3]
         
