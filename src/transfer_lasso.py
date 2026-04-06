@@ -85,13 +85,10 @@ def np_mean(array, axis):
 
 
 spec = [
-    ('X', float32[::1,:]),
-    ('Y', float32[::1]),
     ('beta_t', float32[::1]),
     ('fit_intercept', boolean),
     ('beta', float32[::1]),
     ('alpha', float32),
-    ('copy_X', boolean),
     ('l', float32),
     ('a', float32),
     ('tol', float32),
@@ -103,26 +100,14 @@ spec = [
 @jitclass(spec)
 class _TransferLasso():
     def __init__(self,
-                X,
-                Y,
                 beta_t, 
                 fit_intercept = True, 
                 alpha = 0,
-                copy_X = False, 
                 l = 1.0, 
                 a = 0.0, 
                 tol = 1e-4, 
                 max_iter = 1000,
                 n_cpus = 1):
-        if copy_X == True:
-            #X = stats.zscore(X, axis = 0)
-            #X = np.asfortranarray(X.copy())
-            self.X = _zscore_jit(X, axis = 0)
-            
-        else:
-            #X = np.asfortranarray(X)
-            self.X = _zscore_jit(X, axis = 0)
-        self.Y = Y
         self.beta_t = beta_t
         self.l = l
         self.fit_intercept = fit_intercept
@@ -132,25 +117,22 @@ class _TransferLasso():
         self.beta = np.zeros_like(beta_t)
         self.alpha = alpha
         self.n_cpus = n_cpus
-        self._cached_residual = np.zeros_like(Y)
+        #self._cached_residual = np.zeros_like(beta_t)
         
         # # Notify about JIT compilation status
         # if HAS_NUMBA:
         #     print("Numba JIT compilation enabled for additional speedup")
         
 
-    def _gamma(self, i):
-        X = self.X
-        N = len(X)
+    def _gamma(self, X_col, i):
+        N = len(X_col)
         # Optimized: use cached residual from fit() and add back feature i's contribution
         # Use JIT-compiled helper if available
-        residual_i = _compute_residual_i_jit(self._cached_residual, X[:, i], self.beta[i])
-        return _compute_gamma_jit(X[:, i], residual_i, N)
+        residual_i = _compute_residual_i_jit(self._cached_residual, X_col, self.beta[i])
+        return _compute_gamma_jit(X_col, residual_i, N)
         
-    def _alpha(self):
+    def _alpha(self, X, Y):
         beta = self.beta
-        X = self.X
-        Y = self.Y
         return Y.mean() - np_mean(X, 0) @ beta
 
 
@@ -181,7 +163,7 @@ class _TransferLasso():
         return np.array([l, -l*(2*a-1) + b, -l*(2*a-1)])
 
 
-    def _update(self, i) :
+    def _update(self, X_col, i) :
         b = self.beta_t[i]
         l = self.l
         a = self.a
@@ -192,7 +174,7 @@ class _TransferLasso():
             _lower = self._lower_neg(i)
             _upper = self._upper_neg(i)
 
-        gamma = self._gamma(i)
+        gamma = self._gamma(X_col, i)
         # Use JIT-compiled bounds checking
         sol_mask = _check_bounds_jit(gamma, _lower, _upper)
 
@@ -205,24 +187,29 @@ class _TransferLasso():
         self.beta[i] = solution[0]
         #return solution[0]
 
-    def fit(self):
+    def fit(self, X, Y):
         beta_t = self.beta_t
-        self.beta = np.ascontiguousarray(self.beta)
+
+        X = np.asfortranarray(X.astype(np.float32))
+        Y = np.asfortranarray(Y.astype(np.float32))
+
         for _ in range(self.max_iter):
             if _%100 == 0:
                 print(_)
-            
+
+            X = _zscore_jit(X, axis = 0)
             # Optimized: cache residual computation once per iteration
-            N = len(self.X)
-            self._cached_residual = self.Y - self.alpha - self.X @ self.beta
+            N = len(X)
+            self._cached_residual = Y - self.alpha - np.dot(X ,self.beta)
             
             beta_old = self.beta.copy()
             
             for i in range(len(self.beta_t)):
                 old_beta_i = self.beta[i]
-                self._update(i)
+                X_col = X[:,i]
+                self._update(X_col, i)
                 # Cheap O(N) rank-1 update instead of full O(N*P) recompute
-                self._cached_residual -= self.X[:, i] * (self.beta[i] - old_beta_i)
+                self._cached_residual -= X_col * (self.beta[i] - old_beta_i)
             
             # Optimized: early stopping when converged
             # if np.abs(self.beta - beta_old).max() <= self.tol:
@@ -231,7 +218,7 @@ class _TransferLasso():
             #         print(f"Converged at iteration {_}")
             #     break
             
-            self.alpha = self._alpha()
+            self.alpha = self._alpha(X,Y)
 
         # self.train_mse = .5*(Y - self.alpha - X @ self.beta).mean()
         # self.train_log_likelihood = self.train_mse + l*(a*np.abs(self.beta).sum() + (1-a)*np.abs(self.beta - self.beta_t).sum())
@@ -248,20 +235,20 @@ class _TransferLasso():
         return 1- mse/Y.var()
 
 
-def TransferLasso(X, Y, beta_t, fit_intercept=True, alpha=0.0, copy_X=False,
+def TransferLasso(beta_t, fit_intercept=True, alpha=0.0,
                   l=1.0, a=0.0, tol=1e-4, max_iter=1000, n_cpus=1):
     # Do type conversion in plain Python before entering njit
-    if X.dtype != np.float32:
-        X = X.astype(np.float32)
-    if Y.dtype != np.float32:
-        Y = Y.astype(np.float32)
+    # if X.dtype != np.float32:
+    #     X = X.astype(np.float32)
+    # if Y.dtype != np.float32:
+    #     Y = Y.astype(np.float32)
     if beta_t.dtype != np.float32:
         beta_t = beta_t.astype(np.float32)
-    return _TransferLasso_njit(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus)
+    return _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus)
 
 @njit
-def _TransferLasso_njit(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus):
-    return _TransferLasso(X, Y, beta_t, fit_intercept, alpha, copy_X, l, a, tol, max_iter, n_cpus)
+def _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus):
+    return _TransferLasso(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus)
 
 # @njit
 # def TransferLasso(

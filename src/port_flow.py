@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LassoCV, Lasso, LinearRegression, ElasticNet, ElasticNetCV
-from src.transfer_lasso import TransferLasso
-import src.cond_norm_flows as cnf
-from src.cond_norm_flows import Data
+from .transfer_lasso import TransferLasso, _zscore_jit
+from . import cond_norm_flows as cnf
+from .cond_norm_flows import Data
 import os
 import pickle
 from scipy import stats
@@ -310,15 +310,14 @@ class PortFlow():
         X_test = _zscore_jit(X_test, 0)
         
         
-        model_trans = TransferLasso(X_train, 
-                                    Y_train, 
+        model_trans = TransferLasso(
                                     beta_t, 
                                     l = l, 
                                     a = a, 
                                     tol = tol, 
                                     max_iter = max_iter, 
                                     n_cpus = 1)
-        model_trans.fit()
+        model_trans.fit(X_train, Y_train)
         
         R2 = model_trans.score(X_test, Y_test)
         MSE = (1-R2)*Y_test.var()
