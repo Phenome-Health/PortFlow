@@ -94,7 +94,8 @@ spec = [
     ('tol', float32),
     ('max_iter', int32),
     ('n_cpus', int32), 
-    ('_cached_residual', float32[::1])
+    ('_cached_residual', float32[::1]),
+    ('verbose', boolean)
 ]
 
 @jitclass(spec)
@@ -107,7 +108,8 @@ class _TransferLasso():
                 a = 0.0, 
                 tol = 1e-4, 
                 max_iter = 1000,
-                n_cpus = 1):
+                n_cpus = 1,
+                verbose = True):
         self.beta_t = beta_t
         self.l = l
         self.fit_intercept = fit_intercept
@@ -117,6 +119,7 @@ class _TransferLasso():
         self.beta = np.zeros_like(beta_t)
         self.alpha = alpha
         self.n_cpus = n_cpus
+        self.verbose = verbose
         #self._cached_residual = np.zeros_like(beta_t)
         
         # # Notify about JIT compilation status
@@ -194,8 +197,9 @@ class _TransferLasso():
         Y = np.asfortranarray(Y.astype(np.float32))
 
         for _ in range(self.max_iter):
-            if _%100 == 0:
-                print(_)
+            if self.verbose:
+                if _%100 == 0:
+                    print(_)
 
             X = _zscore_jit(X, axis = 0)
             # Optimized: cache residual computation once per iteration
@@ -236,7 +240,7 @@ class _TransferLasso():
 
 
 def TransferLasso(beta_t, fit_intercept=True, alpha=0.0,
-                  l=1.0, a=0.0, tol=1e-4, max_iter=1000, n_cpus=1):
+                  l=1.0, a=0.0, tol=1e-4, max_iter=1000, n_cpus=1, verbose = True):
     # Do type conversion in plain Python before entering njit
     # if X.dtype != np.float32:
     #     X = X.astype(np.float32)
@@ -244,11 +248,11 @@ def TransferLasso(beta_t, fit_intercept=True, alpha=0.0,
     #     Y = Y.astype(np.float32)
     if beta_t.dtype != np.float32:
         beta_t = beta_t.astype(np.float32)
-    return _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus)
+    return _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus, verbose)
 
 @njit
-def _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus):
-    return _TransferLasso(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus)
+def _TransferLasso_njit(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus, verbose):
+    return _TransferLasso(beta_t, fit_intercept, alpha, l, a, tol, max_iter, n_cpus, verbose)
 
 # @njit
 # def TransferLasso(
