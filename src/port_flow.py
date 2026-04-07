@@ -18,9 +18,11 @@ from scipy import stats
 
 def get_overlapping_features(target_features, source_features):
     overlap = list(set(source_features).intersection(target_features))
-    overlap.sort()
     target_only = [x for x in target_features if x not in overlap]
     source_only = [x for x in source_features if x not in overlap]
+    overlap.sort()
+    target_only.sort()
+    source_only.sort()
     
     return {'overlap' : overlap, 'target_only' : target_only, 'source_only' : source_only}
     
@@ -46,9 +48,10 @@ class PortFlow():
         lambda_trans = 1,
         alpha_trans = 0,
         fit_intercept = True,
-        eps_cv = 1e-3):
+        eps_cv = 1e-3, 
+        verbose = True):
         
-        
+        self.verbose = verbose
         self.out_dir = out_dir
         
         if not os.path.isdir(out_dir):
@@ -205,6 +208,7 @@ class PortFlow():
         if out_dir is None:
             out_dir = self.out_dir
         self.source_lm_params = pd.read_csv(out_dir + lm_params_path, index_col = 0)
+        #self.cnf_model = torch.load(out_dir + cnf_model_path, weights_only = False)
         self.cnf_model = self.cnf_model.load_state_dict(torch.load(out_dir + cnf_model_path, weights_only = True))
         
         self.predict_col = self.source_lm_params.index.tolist()[3]
@@ -288,8 +292,14 @@ class PortFlow():
                        n_cpus = 1,
                        include_target_only = False, 
                        test_size = .2,
-                       seed = None):
-        
+                       seed = None, 
+                       tune = False, 
+                       l_min = .001, 
+                       l_max = 1, 
+                       num_l = 100 
+                     ):
+
+        verbose = self.verbose
         features = self.features
         feats_use = features['source_only'] + features['overlap']
         
@@ -309,14 +319,38 @@ class PortFlow():
         
         X_test = _zscore_jit(X_test, 0)
         
-        
+        if tune:
+            print('Tuning trasnfer lasso model...')
+            print(' ')
+            R2s = []
+            lambs = np.linspace(l_min, l_max, num_l)
+            for i, l in enumerate(lambs):
+                if verbose:
+                    print(i)
+                    print(' ')
+                model_trans = TransferLasso(
+                                            beta_t, 
+                                            l = l, 
+                                            a = a, 
+                                            tol = tol, 
+                                            max_iter = max_iter, 
+                                            n_cpus = 1, 
+                                            verbose = verbose)
+                model_trans.fit(X_train, Y_train)
+                
+                R2 = model_trans.score(X_test, Y_test)
+                R2s.append(R2)
+
+            l = lambs[np.argmax(R2s)]
+            print(f'Optimal lambda : {l}')
         model_trans = TransferLasso(
                                     beta_t, 
                                     l = l, 
                                     a = a, 
                                     tol = tol, 
                                     max_iter = max_iter, 
-                                    n_cpus = 1)
+                                    n_cpus = 1, 
+                                    verbose = verbose)
         model_trans.fit(X_train, Y_train)
         
         R2 = model_trans.score(X_test, Y_test)
