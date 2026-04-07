@@ -320,12 +320,13 @@ class PortFlow():
         X_test = _zscore_jit(X_test, 0)
         
         if tune:
-            print('Tuning trasnfer lasso model...')
+            print('Tuning transfer lasso model...')
             print(' ')
             R2s = []
             lambs = np.linspace(l_min, l_max, num_l)
             for i, l in enumerate(lambs):
                 if verbose:
+                    print(' ')
                     print(i)
                     print(' ')
                 model_trans = TransferLasso(
@@ -408,7 +409,11 @@ class PortFlow():
                    max_iter = 1000,
                    n_cpus = 1,
                    include_target_only = False, 
-                   test_size = .2):
+                   test_size = .2,
+                   tune = False, 
+                   l_min = .001, 
+                   l_max = 1, 
+                   num_l = 100):
         
         features = self.features
         feats_use = features['source_only'] + features['overlap']
@@ -443,7 +448,11 @@ class PortFlow():
                             n_cpus = n_cpus,
                             include_target_only = include_target_only, 
                             test_size = test_size,
-                            seed = seed)
+                            seed = seed, 
+                            tune = tune, 
+                            l_min = l_min, 
+                            l_max = l_max, 
+                            num_l = num_l)
         
         print('Model successfully ported!! Great job!!')
         print(' ')
@@ -465,7 +474,11 @@ class PortFlow():
                    n_cpus = 1,
                    include_target_only = False, 
                    test_size = .2,
-                   seed = None):
+                   seed = None, 
+                   tune = False, 
+                   l_min = .001, 
+                   l_max = 1, 
+                   num_l = 100 ):
         print('Running multiple imputation. Note: This may take a while. ')
         features = self.features
         feats_use = features['source_only'] + features['overlap']
@@ -503,7 +516,11 @@ class PortFlow():
                                 n_cpus = n_cpus,
                                 include_target_only = include_target_only, 
                                 test_size = test_size,
-                                seed = None)
+                                seed = sedd, 
+                                tune = tune, 
+                                l_min = l_min, 
+                                l_max = l_max, 
+                                num_l = num_l)
 
             to_concat.append(df_out)
 
@@ -529,7 +546,11 @@ class PortFlow():
                     max_iter = 1000,
                     n_cpus = 1,
                     include_target_only = False, 
-                    test_size = .2):
+                    test_size = .2,
+                    tune = False, 
+                    l_min = .001, 
+                    l_max = 1, 
+                    num_l = 100):
 
         if n_samples == 1:
             self.fit_target_single(
@@ -548,7 +569,11 @@ class PortFlow():
                    max_iter = max_iter,
                    n_cpus = n_cpus,
                    include_target_only = include_target_only, 
-                   test_size = test_size)
+                   test_size = test_size,
+                   tune = tune, 
+                   l_min = l_min, 
+                   l_max = l_max, 
+                   num_l = num_l)
         else:
             self.fit_target_multi(
                    df,
@@ -566,7 +591,11 @@ class PortFlow():
                    max_iter = max_iter,
                    n_cpus = n_cpus,
                    include_target_only = include_target_only, 
-                   test_size = test_size)
+                   test_size = test_size,
+                   tune = tune, 
+                   l_min = l_min, 
+                   l_max = l_max, 
+                   num_l = num_l)
 
 
     ####### UNNECESSARY FOR NOW, BUT KEEPING IN CASE WE NEED LATER #########
